@@ -1,0 +1,1524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FORGE — Free Multi-Agent App Builder</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f10;
+    --bg2: #141618;
+    --bg3: #1a1d1f;
+    --bg4: #212426;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e8e6;
+    --text2: #8a8a85;
+    --text3: #555550;
+    --green: #1D9E75;
+    --green2: #0F6E56;
+    --green-dim: rgba(29,158,117,0.12);
+    --amber: #EF9F27;
+    --amber-dim: rgba(239,159,39,0.1);
+    --blue: #378ADD;
+    --blue-dim: rgba(55,138,221,0.1);
+    --purple: #7F77DD;
+    --purple-dim: rgba(127,119,221,0.1);
+    --red: #E24B4A;
+    --red-dim: rgba(226,75,74,0.1);
+    --radius: 8px;
+    --radius-lg: 12px;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Layout */
+  .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 0 24px;
+    height: 56px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    color: var(--text);
+  }
+  .logo span { color: var(--green); }
+
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text3);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .topbar-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .status-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    color: var(--text3);
+    font-family: var(--mono);
+  }
+  .status-badge.live { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+  .main { display: flex; flex: 1; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+  }
+
+  /* Agent cards in sidebar */
+  .agent-slot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .agent-slot:hover { border-color: var(--border2); }
+  .agent-slot.active { border-color: var(--green); background: var(--green-dim); }
+  .agent-slot.busy { border-color: var(--amber); background: var(--amber-dim); }
+  .agent-slot.error { border-color: var(--red); background: var(--red-dim); }
+
+  .agent-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text3);
+    flex-shrink: 0;
+  }
+  .agent-slot.active .agent-dot { background: var(--green); }
+  .agent-slot.busy .agent-dot { background: var(--amber); animation: pulse 1s infinite; }
+  .agent-slot.error .agent-dot { background: var(--red); }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+  .agent-info { flex: 1; min-width: 0; }
+  .agent-role { font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+  .agent-model-name { font-family: var(--mono); font-size: 10px; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .agent-slot.active .agent-model-name { color: var(--green); }
+  .agent-slot.busy .agent-model-name { color: var(--amber); }
+
+  .agent-edit-btn {
+    font-size: 10px;
+    color: var(--text3);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-family: var(--sans);
+    flex-shrink: 0;
+  }
+  .agent-edit-btn:hover { border-color: var(--border2); color: var(--text2); }
+
+  /* Key inputs */
+  .key-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .key-field label { font-size: 11px; color: var(--text2); width: 72px; flex-shrink: 0; }
+  .key-field input {
+    flex: 1;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 5px 8px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    height: 28px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .key-field input:focus { border-color: var(--border2); }
+  .key-field input.has-key { border-color: var(--green); }
+  .key-indicator { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); flex-shrink: 0; }
+  .key-indicator.set { background: var(--green); }
+
+  .key-help { font-size: 10px; color: var(--text3); line-height: 1.5; margin-top: 4px; }
+  .key-help a { color: var(--blue); text-decoration: none; }
+  .key-help a:hover { text-decoration: underline; }
+
+  /* Content area */
+  .content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+  }
+
+  .tab {
+    font-size: 13px;
+    color: var(--text3);
+    padding: 14px 16px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: var(--sans);
+  }
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--text); border-bottom-color: var(--green); }
+
+  .tab-content { display: none; flex: 1; overflow-y: auto; padding: 24px; }
+  .tab-content.active { display: flex; flex-direction: column; gap: 20px; }
+
+  /* Build tab */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 14px;
+  }
+
+  textarea.idea-input {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px 14px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  textarea.idea-input:focus { border-color: var(--border2); }
+  textarea.idea-input::placeholder { color: var(--text3); }
+
+  .type-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .type-chip {
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    color: var(--text2);
+    cursor: pointer;
+    background: var(--bg3);
+    transition: all 0.15s;
+    font-family: var(--sans);
+  }
+  .type-chip:hover { border-color: var(--border2); }
+  .type-chip.selected { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+
+  .complexity-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  /* Stack builder */
+  .stack-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+  }
+
+  .stack-role {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    width: 80px;
+    flex-shrink: 0;
+  }
+
+  .stack-select {
+    flex: 1;
+    padding: 5px 10px;
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 12px;
+    outline: none;
+    cursor: pointer;
+  }
+  .stack-select:focus { border-color: var(--border2); }
+
+  .stack-desc { font-size: 10px; color: var(--text3); margin-top: 4px; }
+
+  /* Build button */
+  .build-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    letter-spacing: 0.3px;
+  }
+  .build-btn:hover { background: var(--green2); }
+  .build-btn:active { transform: scale(0.99); }
+  .build-btn:disabled { background: var(--bg4); color: var(--text3); cursor: not-allowed; transform: none; }
+
+  /* Activity log */
+  .log-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .log-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg3);
+  }
+
+  .log-head-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .log-running-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    animation: pulse 1s infinite;
+    display: none;
+  }
+  .log-running-dot.show { display: block; }
+
+  .log-clear-btn {
+    font-size: 11px;
+    color: var(--text3);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: var(--sans);
+  }
+  .log-clear-btn:hover { color: var(--text2); }
+
+  .log-body {
+    padding: 12px 16px;
+    min-height: 160px;
+    max-height: 320px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 2;
+  }
+
+  .log-line { display: flex; gap: 12px; align-items: baseline; }
+  .log-ts { color: var(--text3); flex-shrink: 0; font-size: 10px; }
+  .log-who { flex-shrink: 0; font-size: 11px; min-width: 72px; }
+  .log-who.lead { color: var(--green); }
+  .log-who.coder { color: var(--purple); }
+  .log-who.reviewer { color: var(--blue); }
+  .log-who.architect { color: var(--amber); }
+  .log-who.sys { color: var(--text3); }
+  .log-who.error { color: var(--red); }
+  .log-msg { color: var(--text2); word-break: break-word; font-size: 11px; }
+  .log-msg.success { color: var(--green); }
+  .log-msg.warn { color: var(--amber); }
+  .log-msg.err { color: var(--red); }
+
+  /* Approval gate */
+  .approval-gate {
+    background: var(--bg2);
+    border: 1px solid var(--green);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    display: none;
+  }
+  .approval-gate.show { display: block; }
+
+  .approval-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .approval-body {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  .approval-preview {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text2);
+    margin-bottom: 14px;
+    max-height: 120px;
+    overflow-y: auto;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    display: none;
+  }
+
+  .approval-btns { display: flex; gap: 10px; }
+
+  .btn-approve {
+    padding: 8px 20px;
+    background: var(--green);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  .btn-approve:hover { background: var(--green2); }
+
+  .btn-cancel {
+    padding: 8px 20px;
+    background: none;
+    color: var(--text2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: border-color 0.15s;
+  }
+  .btn-cancel:hover { border-color: var(--border2); }
+
+  /* Output tab */
+  .output-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  .output-toolbar .filename {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text2);
+    flex: 1;
+  }
+
+  .toolbar-btn {
+    font-size: 12px;
+    padding: 5px 14px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--text2);
+    cursor: pointer;
+    font-family: var(--sans);
+    transition: all 0.15s;
+  }
+  .toolbar-btn:hover { border-color: var(--border2); color: var(--text); }
+  .toolbar-btn.primary { background: var(--green); color: #fff; border-color: var(--green); }
+  .toolbar-btn.primary:hover { background: var(--green2); border-color: var(--green2); }
+
+  .code-output {
+    flex: 1;
+    width: 100%;
+    padding: 16px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    resize: none;
+    outline: none;
+    min-height: 400px;
+  }
+
+  .empty-output {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: var(--text3);
+    gap: 12px;
+    text-align: center;
+  }
+
+  .empty-icon {
+    font-size: 32px;
+    opacity: 0.3;
+  }
+
+  /* About tab */
+  .about-section { max-width: 640px; }
+  .about-section h2 { font-size: 20px; font-weight: 500; margin-bottom: 8px; }
+  .about-section p { color: var(--text2); line-height: 1.7; margin-bottom: 16px; }
+  .about-section h3 { font-size: 14px; font-weight: 500; margin-bottom: 8px; margin-top: 20px; color: var(--text); }
+
+  .free-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid var(--green);
+    margin-left: 6px;
+    vertical-align: middle;
+    font-family: var(--mono);
+  }
+
+  .provider-list { display: flex; flex-direction: column; gap: 8px; }
+  .provider-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .provider-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .provider-name { font-weight: 500; font-size: 13px; }
+  .provider-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .provider-link { font-size: 11px; color: var(--blue); text-decoration: none; margin-top: 3px; display: block; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+  }
+  .modal h3 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+  .modal p { font-size: 13px; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
+  .modal-field { margin-bottom: 12px; }
+  .modal-field label { font-size: 12px; color: var(--text2); display: block; margin-bottom: 5px; }
+  .modal-field input, .modal-field select {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    outline: none;
+  }
+  .modal-field input:focus, .modal-field select:focus { border-color: var(--border2); }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); max-height: 300px; }
+    .main { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="logo">FOR<span>GE</span></div>
+    <div class="logo-sub">free multi-agent app builder</div>
+    <div class="topbar-right">
+      <div class="status-badge" id="globalStatus">0 agents ready</div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <!-- Agent team -->
+      <div class="sidebar-section">
+        <div class="section-label">your agent team</div>
+
+        <div class="agent-slot" id="slot-lead" onclick="openAgentModal('lead')">
+          <div class="agent-dot"></div>
+          <div class="agent-info">
+            <div class="agent-role">Lead / Planner</div>
+            <div class="agent-model-name" id="model-lead">not configured</div>
+          </div>
+          <button class="agent-edit-btn">edit</button>
+        </div>
+
+        <div class="agent-slot" id="slot-architect" onclick="openAgentModal('architect')">
+          <div class="agent-dot"></div>
+          <div class="agent-info">
+            <div class="agent-role">Architect</div>
+            <div class="agent-model-name" id="model-architect">not configured</div>
+          </div>
+          <button class="agent-edit-btn">edit</button>
+        </div>
+
+        <div class="agent-slot" id="slot-coder" onclick="openAgentModal('coder')">
+          <div class="agent-dot"></div>
+          <div class="agent-info">
+            <div class="agent-role">Coder</div>
+            <div class="agent-model-name" id="model-coder">not configured</div>
+          </div>
+          <button class="agent-edit-btn">edit</button>
+        </div>
+
+        <div class="agent-slot" id="slot-reviewer" onclick="openAgentModal('reviewer')">
+          <div class="agent-dot"></div>
+          <div class="agent-info">
+            <div class="agent-role">Reviewer</div>
+            <div class="agent-model-name" id="model-reviewer">not configured</div>
+          </div>
+          <button class="agent-edit-btn">edit</button>
+        </div>
+      </div>
+
+      <!-- API Keys -->
+      <div class="sidebar-section">
+        <div class="section-label">api keys</div>
+
+        <div class="key-field">
+          <label>Groq</label>
+          <input type="password" id="key-groq" placeholder="gsk_..." oninput="saveKey('groq', this.value)" />
+          <div class="key-indicator" id="ind-groq"></div>
+        </div>
+
+        <div class="key-field">
+          <label>Gemini</label>
+          <input type="password" id="key-gemini" placeholder="AIza..." oninput="saveKey('gemini', this.value)" />
+          <div class="key-indicator" id="ind-gemini"></div>
+        </div>
+
+        <div class="key-field">
+          <label>MiniMax</label>
+          <input type="password" id="key-minimax" placeholder="eyJ..." oninput="saveKey('minimax', this.value)" />
+          <div class="key-indicator" id="ind-minimax"></div>
+        </div>
+
+        <div class="key-field">
+          <label>HuggingFace</label>
+          <input type="password" id="key-hf" placeholder="hf_..." oninput="saveKey('hf', this.value)" />
+          <div class="key-indicator" id="ind-hf"></div>
+        </div>
+
+        <div class="key-help">Keys are saved in your browser only. Never sent anywhere except the provider's API. <a href="#" onclick="showTab('about'); return false;">Get free keys →</a></div>
+      </div>
+
+      <!-- Quick presets -->
+      <div class="sidebar-section">
+        <div class="section-label">quick presets</div>
+        <button class="type-chip" style="margin-bottom:6px;width:100%;border-radius:8px;" onclick="applyPreset('groq-only')">Groq only (fastest)</button>
+        <button class="type-chip" style="margin-bottom:6px;width:100%;border-radius:8px;" onclick="applyPreset('groq-gemini')">Groq + Gemini</button>
+        <button class="type-chip" style="margin-bottom:6px;width:100%;border-radius:8px;" onclick="applyPreset('full-stack')">Full stack (all providers)</button>
+      </div>
+
+    </div>
+
+    <!-- Main content -->
+    <div class="content">
+      <div class="tabs">
+        <button class="tab active" onclick="showTab('build')">Build</button>
+        <button class="tab" onclick="showTab('output')">Output</button>
+        <button class="tab" onclick="showTab('about')">About & Keys</button>
+      </div>
+
+      <!-- BUILD TAB -->
+      <div class="tab-content active" id="tab-build">
+
+        <div class="card">
+          <div class="card-title">what do you want to build?</div>
+          <textarea class="idea-input" id="ideaInput" placeholder="Describe your app in plain language. No technical knowledge needed.
+
+Examples:
+• A budget tracker where I log income and expenses and see monthly totals
+• A password generator with custom length and character options
+• A simple kanban board to organize my tasks
+• A tip calculator that splits bills between friends"></textarea>
+
+          <div class="type-grid" id="typeGrid">
+            <button class="type-chip selected" onclick="selectType(this,'web app')">web app</button>
+            <button class="type-chip" onclick="selectType(this,'tool / utility')">tool / utility</button>
+            <button class="type-chip" onclick="selectType(this,'dashboard')">dashboard</button>
+            <button class="type-chip" onclick="selectType(this,'game')">game</button>
+            <button class="type-chip" onclick="selectType(this,'form / survey')">form</button>
+            <button class="type-chip" onclick="selectType(this,'calculator')">calculator</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">agent workflow</div>
+          <div class="stack-row">
+            <div class="stack-role">Step 1</div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text2);">Lead agent analyzes your idea and creates a detailed plan</div>
+            </div>
+          </div>
+          <div class="stack-row">
+            <div class="stack-role">Step 2</div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text2);">Architect agent designs the structure and tech approach</div>
+            </div>
+          </div>
+          <div class="stack-row">
+            <div class="stack-role">Step 3</div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text2);">Coder agent builds the full working application</div>
+            </div>
+          </div>
+          <div class="stack-row">
+            <div class="stack-role">Step 4</div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text2);">Reviewer agent checks for bugs and improvements</div>
+            </div>
+          </div>
+          <div class="stack-row" style="border-color:var(--green);background:var(--green-dim);">
+            <div class="stack-role" style="color:var(--green);">Step 5</div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--green);">You approve → download your working app as a single HTML file</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="build-btn" id="buildBtn" onclick="startBuild()">start building</button>
+
+        <!-- Activity log -->
+        <div class="log-wrap" id="logWrap" style="display:none;">
+          <div class="log-head">
+            <div class="log-head-title">
+              <div class="log-running-dot" id="runningDot"></div>
+              agent activity
+            </div>
+            <button class="log-clear-btn" onclick="clearLog()">clear</button>
+          </div>
+          <div class="log-body" id="logBody"></div>
+        </div>
+
+        <!-- Approval gate -->
+        <div class="approval-gate" id="approvalGate">
+          <div class="approval-title" id="approvalTitle">ready to generate your app</div>
+          <div class="approval-body" id="approvalBody">The agents have completed planning. Approve to generate the full working code.</div>
+          <div class="approval-preview" id="approvalPreview"></div>
+          <div class="approval-btns">
+            <button class="btn-approve" onclick="approveGate()">approve & build</button>
+            <button class="btn-cancel" onclick="cancelGate()">cancel</button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- OUTPUT TAB -->
+      <div class="tab-content" id="tab-output">
+        <div id="outputEmpty" class="empty-output">
+          <div class="empty-icon">&#9634;</div>
+          <div style="font-size:14px;color:var(--text3);">No output yet</div>
+          <div style="font-size:12px;color:var(--text3);">Build something in the Build tab first</div>
+        </div>
+        <div id="outputReady" style="display:none;flex-direction:column;gap:0;">
+          <div class="output-toolbar">
+            <span class="filename" id="outputFilename">my-app.html</span>
+            <button class="toolbar-btn" onclick="copyOutput()">copy</button>
+            <button class="toolbar-btn primary" onclick="downloadOutput()">download</button>
+          </div>
+          <textarea class="code-output" id="codeOutput" spellcheck="false"></textarea>
+        </div>
+      </div>
+
+      <!-- ABOUT TAB -->
+      <div class="tab-content" id="tab-about">
+        <div class="about-section">
+          <h2>FORGE <span class="free-badge">free</span></h2>
+          <p>FORGE is a free, open-source multi-agent app builder. You describe what you want to build in plain English, and a team of AI agents — each powered by free APIs — plans, designs, codes, and reviews your app. You download it as a single HTML file.</p>
+          <p>No subscription. No credit card. No install. Just free API keys and a browser.</p>
+
+          <h3>how to get free api keys</h3>
+          <div class="provider-list">
+            <div class="provider-item">
+              <div class="provider-dot" style="background:var(--purple);"></div>
+              <div>
+                <div class="provider-name">Groq <span class="free-badge">free tier</span></div>
+                <div class="provider-desc">Fast inference. Free tier includes generous daily token limits. Best for coding tasks.</div>
+                <a class="provider-link" href="https://console.groq.com" target="_blank">console.groq.com →</a>
+              </div>
+            </div>
+            <div class="provider-item">
+              <div class="provider-dot" style="background:var(--blue);"></div>
+              <div>
+                <div class="provider-name">Gemini <span class="free-badge">free tier</span></div>
+                <div class="provider-desc">Google AI Studio free tier. Large context window, great for planning and review.</div>
+                <a class="provider-link" href="https://aistudio.google.com" target="_blank">aistudio.google.com →</a>
+              </div>
+            </div>
+            <div class="provider-item">
+              <div class="provider-dot" style="background:var(--amber);"></div>
+              <div>
+                <div class="provider-name">MiniMax M2.7 <span class="free-badge">free tier</span></div>
+                <div class="provider-desc">Open weights model. Free API tier available. Strong agentic capabilities.</div>
+                <a class="provider-link" href="https://platform.minimax.io" target="_blank">platform.minimax.io →</a>
+              </div>
+            </div>
+            <div class="provider-item">
+              <div class="provider-dot" style="background:var(--green);"></div>
+              <div>
+                <div class="provider-name">Hugging Face <span class="free-badge">free tier</span></div>
+                <div class="provider-desc">Access to thousands of open models. Free Inference API tier available.</div>
+                <a class="provider-link" href="https://huggingface.co/settings/tokens" target="_blank">huggingface.co →</a>
+              </div>
+            </div>
+          </div>
+
+          <h3>open source</h3>
+          <p>FORGE is a single HTML file. No backend, no server, no data collection. Your API keys are stored only in your browser's localStorage and are never sent anywhere except directly to the provider's API.</p>
+          <p style="font-size:12px;color:var(--text3);">Built with love for people who have big ideas and no budget.</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Agent config modal -->
+<div class="modal-backdrop" id="agentModal">
+  <div class="modal">
+    <h3 id="modalTitle">Configure Agent</h3>
+    <p id="modalDesc">Choose a provider and model for this agent role.</p>
+    <div class="modal-field">
+      <label>Provider</label>
+      <select id="modalProvider" onchange="updateModelOptions()">
+        <option value="">— select provider —</option>
+        <option value="groq">Groq (free)</option>
+        <option value="gemini">Gemini (free)</option>
+        <option value="minimax">MiniMax (free)</option>
+        <option value="hf">Hugging Face (free)</option>
+        <option value="ollama">Ollama (local)</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Model</label>
+      <select id="modalModel">
+        <option value="">— select provider first —</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">cancel</button>
+      <button class="btn-approve" onclick="saveAgent()">save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────
+const STATE = {
+  keys: { groq:'', gemini:'', minimax:'', hf:'' },
+  agents: { lead:null, architect:null, coder:null, reviewer:null },
+  selectedType: 'web app',
+  building: false,
+  output: '',
+  pendingApproval: null,
+  currentModalRole: null
+};
+
+const MODELS = {
+  groq: [
+    { id:'llama-3.3-70b-versatile', name:'Llama 3.3 70B Versatile' },
+    { id:'llama-3.1-8b-instant', name:'Llama 3.1 8B Instant (fastest)' },
+    { id:'mixtral-8x7b-32768', name:'Mixtral 8x7B' },
+    { id:'gemma2-9b-it', name:'Gemma 2 9B' }
+  ],
+  gemini: [
+    { id:'gemini-2.0-flash', name:'Gemini 2.0 Flash' },
+    { id:'gemini-1.5-flash', name:'Gemini 1.5 Flash' },
+    { id:'gemini-1.5-pro', name:'Gemini 1.5 Pro' }
+  ],
+  minimax: [
+    { id:'MiniMax-Text-01', name:'MiniMax M2.7' }
+  ],
+  hf: [
+    { id:'mistralai/Mistral-7B-Instruct-v0.3', name:'Mistral 7B Instruct' },
+    { id:'microsoft/DialoGPT-medium', name:'DialoGPT Medium' }
+  ],
+  ollama: [
+    { id:'llama3.2', name:'Llama 3.2 (local)' },
+    { id:'qwen2.5:32b', name:'Qwen 2.5 32B (local)' },
+    { id:'mistral', name:'Mistral (local)' },
+    { id:'codellama', name:'CodeLlama (local)' }
+  ]
+};
+
+// ─── Init ─────────────────────────────────────────────────────
+window.addEventListener('load', () => {
+  loadFromStorage();
+  updateUI();
+});
+
+function loadFromStorage() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('forge_state') || '{}');
+    if (saved.keys) Object.assign(STATE.keys, saved.keys);
+    if (saved.agents) Object.assign(STATE.agents, saved.agents);
+
+    Object.keys(STATE.keys).forEach(k => {
+      const el = document.getElementById('key-' + k);
+      if (el && STATE.keys[k]) el.value = STATE.keys[k];
+    });
+  } catch(e) {}
+}
+
+function saveToStorage() {
+  try {
+    localStorage.setItem('forge_state', JSON.stringify({ keys: STATE.keys, agents: STATE.agents }));
+  } catch(e) {}
+}
+
+// ─── Keys ─────────────────────────────────────────────────────
+function saveKey(provider, val) {
+  STATE.keys[provider] = val.trim();
+  const ind = document.getElementById('ind-' + provider);
+  const inp = document.getElementById('key-' + provider);
+  if (val.trim().length > 8) {
+    ind && ind.classList.add('set');
+    inp && inp.classList.add('has-key');
+  } else {
+    ind && ind.classList.remove('set');
+    inp && inp.classList.remove('has-key');
+  }
+  saveToStorage();
+  updateGlobalStatus();
+}
+
+// ─── Tabs ─────────────────────────────────────────────────────
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => {
+    const tabs = ['build','output','about'];
+    t.classList.toggle('active', tabs[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  const el = document.getElementById('tab-' + name);
+  if (el) el.classList.add('active');
+}
+
+// ─── Type selection ───────────────────────────────────────────
+function selectType(btn, type) {
+  STATE.selectedType = type;
+  document.querySelectorAll('#typeGrid .type-chip').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+
+// ─── Agent modal ──────────────────────────────────────────────
+const ROLE_DESCS = {
+  lead: 'The Lead agent analyzes your idea and breaks it into a clear plan for the other agents.',
+  architect: 'The Architect designs the technical structure — files, components, and approach.',
+  coder: 'The Coder writes the actual working code for your app.',
+  reviewer: 'The Reviewer checks the code for bugs, edge cases, and improvements.'
+};
+
+function openAgentModal(role) {
+  STATE.currentModalRole = role;
+  const labels = { lead:'Lead / Planner', architect:'Architect', coder:'Coder', reviewer:'Reviewer' };
+  document.getElementById('modalTitle').textContent = 'Configure ' + labels[role];
+  document.getElementById('modalDesc').textContent = ROLE_DESCS[role];
+
+  const current = STATE.agents[role];
+  const provSel = document.getElementById('modalProvider');
+  provSel.value = current ? current.provider : '';
+
+  updateModelOptions();
+
+  if (current) {
+    document.getElementById('modalModel').value = current.model;
+  }
+
+  document.getElementById('agentModal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('agentModal').classList.remove('show');
+  STATE.currentModalRole = null;
+}
+
+function updateModelOptions() {
+  const prov = document.getElementById('modalProvider').value;
+  const sel = document.getElementById('modalModel');
+  sel.innerHTML = '';
+
+  if (!prov) {
+    sel.innerHTML = '<option value="">— select provider first —</option>';
+    return;
+  }
+
+  const models = MODELS[prov] || [];
+  models.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.name;
+    sel.appendChild(opt);
+  });
+}
+
+function saveAgent() {
+  const role = STATE.currentModalRole;
+  const provider = document.getElementById('modalProvider').value;
+  const model = document.getElementById('modalModel').value;
+
+  if (!provider || !model) { closeModal(); return; }
+
+  STATE.agents[role] = { provider, model };
+  saveToStorage();
+  updateUI();
+  closeModal();
+}
+
+// ─── Presets ──────────────────────────────────────────────────
+function applyPreset(preset) {
+  const presets = {
+    'groq-only': {
+      lead: { provider:'groq', model:'llama-3.3-70b-versatile' },
+      architect: { provider:'groq', model:'llama-3.3-70b-versatile' },
+      coder: { provider:'groq', model:'llama-3.3-70b-versatile' },
+      reviewer: { provider:'groq', model:'llama-3.1-8b-instant' }
+    },
+    'groq-gemini': {
+      lead: { provider:'gemini', model:'gemini-2.0-flash' },
+      architect: { provider:'groq', model:'llama-3.3-70b-versatile' },
+      coder: { provider:'groq', model:'llama-3.3-70b-versatile' },
+      reviewer: { provider:'gemini', model:'gemini-1.5-flash' }
+    },
+    'full-stack': {
+      lead: { provider:'gemini', model:'gemini-1.5-pro' },
+      architect: { provider:'minimax', model:'MiniMax-Text-01' },
+      coder: { provider:'groq', model:'llama-3.3-70b-versatile' },
+      reviewer: { provider:'gemini', model:'gemini-2.0-flash' }
+    }
+  };
+
+  if (presets[preset]) {
+    Object.assign(STATE.agents, presets[preset]);
+    saveToStorage();
+    updateUI();
+    log('SYS', 'preset applied: ' + preset, 'sys');
+    document.getElementById('logWrap').style.display = 'block';
+  }
+}
+
+// ─── UI updates ───────────────────────────────────────────────
+function updateUI() {
+  const roles = ['lead','architect','coder','reviewer'];
+  roles.forEach(role => {
+    const slot = document.getElementById('slot-' + role);
+    const modelEl = document.getElementById('model-' + role);
+    const agent = STATE.agents[role];
+
+    if (agent) {
+      const models = MODELS[agent.provider] || [];
+      const m = models.find(x => x.id === agent.model);
+      modelEl.textContent = (m ? m.name : agent.model) + ' via ' + agent.provider;
+      slot.classList.add('active');
+    } else {
+      modelEl.textContent = 'not configured';
+      slot.classList.remove('active');
+    }
+  });
+
+  updateGlobalStatus();
+}
+
+function updateGlobalStatus() {
+  const configured = Object.values(STATE.agents).filter(a => a !== null).length;
+  const badge = document.getElementById('globalStatus');
+  badge.textContent = configured + ' agent' + (configured !== 1 ? 's' : '') + ' ready';
+  badge.classList.toggle('live', configured > 0);
+}
+
+function setAgentBusy(role, busy) {
+  const slot = document.getElementById('slot-' + role);
+  if (!slot) return;
+  if (busy) {
+    slot.classList.add('busy');
+    slot.classList.remove('active');
+    document.getElementById('model-' + role).textContent.replace('...','');
+  } else {
+    slot.classList.remove('busy');
+    if (STATE.agents[role]) slot.classList.add('active');
+    updateUI();
+  }
+}
+
+// ─── Logging ──────────────────────────────────────────────────
+function ts() {
+  const d = new Date();
+  return [d.getHours(),d.getMinutes(),d.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+}
+
+function log(who, msg, cls, msgCls) {
+  const body = document.getElementById('logBody');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-ts">${ts()}</span><span class="log-who ${cls || 'sys'}">[${who.toUpperCase()}]</span><span class="log-msg ${msgCls||''}">${msg}</span>`;
+  body.appendChild(line);
+  body.scrollTop = body.scrollHeight;
+}
+
+function clearLog() { document.getElementById('logBody').innerHTML = ''; }
+
+// ─── API calls ────────────────────────────────────────────────
+async function callAgent(role, systemPrompt, userPrompt) {
+  const agent = STATE.agents[role];
+  if (!agent) throw new Error('Agent not configured: ' + role);
+
+  const key = STATE.keys[agent.provider];
+
+  if (agent.provider === 'groq') {
+    return await callGroq(key, agent.model, systemPrompt, userPrompt);
+  } else if (agent.provider === 'gemini') {
+    return await callGemini(key, agent.model, systemPrompt, userPrompt);
+  } else if (agent.provider === 'minimax') {
+    return await callMiniMax(key, agent.model, systemPrompt, userPrompt);
+  } else if (agent.provider === 'hf') {
+    return await callHuggingFace(key, agent.model, systemPrompt, userPrompt);
+  } else if (agent.provider === 'ollama') {
+    return await callOllama(agent.model, systemPrompt, userPrompt);
+  }
+  throw new Error('Unknown provider: ' + agent.provider);
+}
+
+async function callGroq(key, model, system, user) {
+  if (!key) throw new Error('Groq API key not set');
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages: [{ role:'system', content:system }, { role:'user', content:user }],
+      max_tokens: 4096,
+      temperature: 0.7
+    })
+  });
+  if (!res.ok) throw new Error('Groq error: ' + res.status + ' ' + await res.text());
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
+async function callGemini(key, model, system, user) {
+  if (!key) throw new Error('Gemini API key not set');
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: system + '\n\n' + user }] }],
+      generationConfig: { maxOutputTokens: 8192, temperature: 0.7 }
+    })
+  });
+  if (!res.ok) throw new Error('Gemini error: ' + res.status + ' ' + await res.text());
+  const data = await res.json();
+  return data.candidates[0].content.parts[0].text;
+}
+
+async function callMiniMax(key, model, system, user) {
+  if (!key) throw new Error('MiniMax API key not set');
+  const res = await fetch('https://api.minimax.chat/v1/text/chatcompletion_v2', {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages: [{ role:'system', content:system }, { role:'user', content:user }],
+      max_tokens: 4096,
+      temperature: 0.7
+    })
+  });
+  if (!res.ok) throw new Error('MiniMax error: ' + res.status + ' ' + await res.text());
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
+async function callHuggingFace(key, model, system, user) {
+  if (!key) throw new Error('HuggingFace API key not set');
+  const res = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ inputs: system + '\n\n' + user, parameters: { max_new_tokens: 2048 } })
+  });
+  if (!res.ok) throw new Error('HuggingFace error: ' + res.status);
+  const data = await res.json();
+  return Array.isArray(data) ? data[0].generated_text : data.generated_text || JSON.stringify(data);
+}
+
+async function callOllama(model, system, user) {
+  const res = await fetch('http://localhost:11434/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      messages: [{ role:'system', content:system }, { role:'user', content:user }],
+      stream: false
+    })
+  });
+  if (!res.ok) throw new Error('Ollama error: ' + res.status + ' — is Ollama running?');
+  const data = await res.json();
+  return data.message.content;
+}
+
+// ─── Build orchestration ──────────────────────────────────────
+async function startBuild() {
+  const idea = document.getElementById('ideaInput').value.trim();
+  if (!idea) { document.getElementById('ideaInput').focus(); return; }
+
+  const activeAgents = Object.entries(STATE.agents).filter(([,v]) => v !== null);
+  if (activeAgents.length === 0) {
+    alert('Please configure at least one agent first. Use the presets in the sidebar or click Edit on any agent slot.');
+    return;
+  }
+
+  STATE.building = true;
+  document.getElementById('buildBtn').disabled = true;
+  document.getElementById('logWrap').style.display = 'block';
+  document.getElementById('approvalGate').classList.remove('show');
+  document.getElementById('runningDot').classList.add('show');
+  clearLog();
+
+  log('SYS', 'build started', 'sys');
+  log('SYS', 'idea: ' + idea.substring(0,60) + (idea.length > 60 ? '...' : ''), 'sys');
+  log('SYS', 'type: ' + STATE.selectedType, 'sys');
+  log('SYS', activeAgents.length + ' agent(s) configured', 'sys');
+
+  let plan = '';
+  let architecture = '';
+  let code = '';
+  let reviewed = '';
+
+  try {
+
+    // ── STEP 1: Lead agent plans ──
+    if (STATE.agents.lead) {
+      setAgentBusy('lead', true);
+      log('LEAD', 'analyzing idea and creating plan...', 'lead');
+
+      plan = await callAgent('lead',
+        `You are a senior product manager and technical lead. Your job is to analyze a user's app idea and produce a clear, actionable plan for building it as a single HTML file with embedded CSS and JavaScript. Be concise and specific. Output a structured plan with: 1) Core features list, 2) UI components needed, 3) Data structures, 4) Key interactions. Keep it under 400 words.`,
+        `Create a build plan for this ${STATE.selectedType}: "${idea}"`
+      );
+
+      setAgentBusy('lead', false);
+      log('LEAD', 'plan complete (' + plan.length + ' chars)', 'lead', 'success');
+    } else {
+      plan = `Build a ${STATE.selectedType}: ${idea}. Create a clean, functional single-file HTML app.`;
+      log('SYS', 'lead agent not configured, using default plan', 'sys', 'warn');
+    }
+
+    await delay(300);
+
+    // ── STEP 2: Architect designs ──
+    if (STATE.agents.architect) {
+      setAgentBusy('architect', true);
+      log('ARCH', 'designing architecture...', 'architect');
+
+      architecture = await callAgent('architect',
+        `You are a senior software architect. Given a product plan, design the technical architecture for a single-file HTML app (HTML + CSS + JS in one file, no external dependencies except Google Fonts if needed). Output: 1) File structure description, 2) CSS approach and color palette, 3) JavaScript architecture (functions/state), 4) Any data storage approach (localStorage etc). Be specific and concise. Under 300 words.`,
+        `Plan:\n${plan}\n\nDesign the architecture for this ${STATE.selectedType}.`
+      );
+
+      setAgentBusy('architect', false);
+      log('ARCH', 'architecture complete', 'architect', 'success');
+    } else {
+      architecture = 'Use clean semantic HTML5, modern CSS with CSS variables for theming, vanilla JavaScript with clear function organization. Store data in localStorage if needed. No external dependencies.';
+      log('SYS', 'architect agent not configured, using defaults', 'sys', 'warn');
+    }
+
+    await delay(300);
+
+    // ── STEP 3: Show approval gate ──
+    const preview = `PLAN SUMMARY:\n${plan.substring(0,300)}...\n\nARCHITECTURE:\n${architecture.substring(0,200)}...`;
+    showApprovalGate(
+      'ready to generate your app',
+      `Planning complete. The Coder agent will now build the full working ${STATE.selectedType}. This may take 30-60 seconds.`,
+      preview,
+      async () => {
+        await buildCode(idea, plan, architecture);
+      }
+    );
+
+  } catch(err) {
+    setAgentBusy('lead', false);
+    setAgentBusy('architect', false);
+    log('ERROR', err.message, 'error', 'err');
+    log('SYS', 'check your API key and internet connection', 'sys', 'warn');
+    document.getElementById('buildBtn').disabled = false;
+    document.getElementById('runningDot').classList.remove('show');
+    STATE.building = false;
+  }
+}
+
+async function buildCode(idea, plan, architecture) {
+  document.getElementById('approvalGate').classList.remove('show');
+
+  try {
+    // ── STEP 4: Coder builds ──
+    if (STATE.agents.coder) {
+      setAgentBusy('coder', true);
+      log('CODE', 'building your app...', 'coder');
+      log('CODE', 'this may take 30-60 seconds...', 'coder');
+
+      const code = await callAgent('coder',
+        `You are an expert frontend developer. Build a complete, working, beautiful single-file HTML application based on the provided plan and architecture. 
+
+REQUIREMENTS:
+- Single HTML file with all CSS and JS embedded
+- NO external dependencies (no React, no Vue, no jQuery) — pure HTML/CSS/JS only
+- Google Fonts are allowed via @import
+- Beautiful, modern design — dark or light theme, your choice — that looks professional
+- Fully functional — all features must actually work
+- Responsive — works on mobile and desktop
+- Use localStorage for any data persistence
+- Clean, well-organized code
+- Include a small "Built with FORGE" credit in the footer
+
+OUTPUT: Return ONLY the complete HTML file. Start with <!DOCTYPE html> and end with </html>. No explanation, no markdown, no code blocks — just raw HTML.`,
+        `Build this ${STATE.selectedType}.\n\nIDEA: ${idea}\n\nPLAN:\n${plan}\n\nARCHITECTURE:\n${architecture}`
+      );
+
+      setAgentBusy('coder', false);
+      log('CODE', 'code generation complete (' + code.length + ' chars)', 'coder', 'success');
+
+      // Clean code output
+      let cleanCode = code.trim();
+      if (cleanCode.startsWith('```')) {
+        cleanCode = cleanCode.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
+      }
+
+      STATE.output = cleanCode;
+
+      // ── STEP 5: Reviewer checks ──
+      if (STATE.agents.reviewer) {
+        setAgentBusy('reviewer', true);
+        log('REVIEW', 'reviewing for bugs and improvements...', 'reviewer');
+
+        const review = await callAgent('reviewer',
+          `You are a senior code reviewer. Review the provided HTML application code and identify any bugs, missing features, or improvements. Then output the COMPLETE CORRECTED HTML file with all fixes applied.
+
+IMPORTANT: Output ONLY the complete corrected HTML file. Start with <!DOCTYPE html>. No explanation, no markdown fences — just the raw HTML.`,
+          `Review and fix this application:\n\n${cleanCode.substring(0, 6000)}`
+        );
+
+        setAgentBusy('reviewer', false);
+
+        let cleanReview = review.trim();
+        if (cleanReview.startsWith('```')) {
+          cleanReview = cleanReview.replace(/^```[a-z]*\n?/, '').replace(/\n?```$/, '').trim();
+        }
+
+        if (cleanReview.includes('<!DOCTYPE') || cleanReview.includes('<html')) {
+          STATE.output = cleanReview;
+          log('REVIEW', 'review complete — improvements applied', 'reviewer', 'success');
+        } else {
+          log('REVIEW', 'review notes recorded (using original code)', 'reviewer', 'success');
+        }
+      }
+
+      // Done!
+      log('SYS', 'build complete!', 'sys', 'success');
+      log('SYS', 'go to the Output tab to download your app', 'sys', 'success');
+
+      showOutput(STATE.output, idea);
+      showTab('output');
+
+    } else {
+      log('SYS', 'no coder agent configured', 'sys', 'err');
+    }
+
+  } catch(err) {
+    setAgentBusy('coder', false);
+    setAgentBusy('reviewer', false);
+    log('ERROR', err.message, 'error', 'err');
+    log('SYS', 'check your API key and try again', 'sys', 'warn');
+  }
+
+  document.getElementById('buildBtn').disabled = false;
+  document.getElementById('runningDot').classList.remove('show');
+  STATE.building = false;
+}
+
+// ─── Approval gate ────────────────────────────────────────────
+function showApprovalGate(title, body, preview, onApprove) {
+  document.getElementById('approvalTitle').textContent = title;
+  document.getElementById('approvalBody').textContent = body;
+  const prev = document.getElementById('approvalPreview');
+  if (preview) { prev.textContent = preview; prev.style.display = 'block'; }
+  else { prev.style.display = 'none'; }
+  document.getElementById('approvalGate').classList.add('show');
+  STATE.pendingApproval = onApprove;
+  document.getElementById('runningDot').classList.remove('show');
+}
+
+function approveGate() {
+  document.getElementById('approvalGate').classList.remove('show');
+  document.getElementById('runningDot').classList.add('show');
+  log('SYS', 'approved — starting code generation', 'sys');
+  if (STATE.pendingApproval) STATE.pendingApproval();
+  STATE.pendingApproval = null;
+}
+
+function cancelGate() {
+  document.getElementById('approvalGate').classList.remove('show');
+  document.getElementById('runningDot').classList.remove('show');
+  document.getElementById('buildBtn').disabled = false;
+  STATE.building = false;
+  log('SYS', 'cancelled by user', 'sys');
+}
+
+// ─── Output ───────────────────────────────────────────────────
+function showOutput(code, idea) {
+  document.getElementById('outputEmpty').style.display = 'none';
+  document.getElementById('outputReady').style.display = 'flex';
+  document.getElementById('codeOutput').value = code;
+  const filename = idea.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').substring(0,30) + '.html';
+  document.getElementById('outputFilename').textContent = filename;
+}
+
+function copyOutput() {
+  const el = document.getElementById('codeOutput');
+  navigator.clipboard.writeText(el.value).then(() => {
+    const btn = event.target;
+    btn.textContent = 'copied!';
+    setTimeout(() => btn.textContent = 'copy', 1500);
+  });
+}
+
+function downloadOutput() {
+  const code = document.getElementById('codeOutput').value;
+  const filename = document.getElementById('outputFilename').textContent;
+  const blob = new Blob([code], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Utils ────────────────────────────────────────────────────
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
+</body>
+</html>
